@@ -1,0 +1,2 @@
+.\Build\tool\compound_bin.exe .\Build\boot_bk5863N_crc.bin 0 .\Build\user_boot_bk5863N_crc.bin 11000 FF .\Build\basic_bk5863N_crc.bin
+.\Build\tool\compound_bin.exe .\Build\boot_bk5863N.bin 0 .\Build\user_boot_bk5863N.bin 11000 FF .\Build\basic_bk5863N.bin

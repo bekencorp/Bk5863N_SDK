@@ -1,0 +1,1 @@
+compound_bin.exe code.bin 0 code_c.bin 10000 code_compound.bin
