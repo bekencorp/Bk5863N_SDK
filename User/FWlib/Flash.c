@@ -21,9 +21,13 @@ typedef struct
 
 static const flash_config_t flash_config[] =
 {
-////  {0x00c22314, FLASH_LINE_2, 2,2,0xF,0x0F,0x0,0x04,0x04,FLASH_CLK_32MHz,6,1,-1,1024*1024}, ////MXIC
-	{0x00c86413, FLASH_LINE_2, 1,2,0x7,0x07,0,0x06,0x01,FLASH_CLK_32MHz,-1,0,-1,512*1024}, //GD25WD40C
-	{0x00514013, FLASH_LINE_2, 1,2,0x7,0x07,0,0x06,0x01,FLASH_CLK_32MHz,-1,0,-1,512*1024}, ///MD25D40D
+    /* flash_id  line_mode,  wrsr,post,mask, protect_all,protect_none,protect_half,unprotect_last_block,  clk ,    qe_bit_post,qe,  cmp,  flash_size */
+////{0x00c22314, FLASH_LINE_2, 2,  2,   0x0F,0x0F|(0U<<8),0x00|(0U<<8),0x04|(0U<<8),   0x04|(0U<<8), FLASH_CLK_32MHz,  6,       1,  -1,   1024*1024}, ////MXIC
+	{0x00c86413, FLASH_LINE_2, 1,  2,   0x07,0x07|(0U<<8),0x00|(0U<<8),0x06|(0U<<8),   0x01|(0U<<8), FLASH_CLK_32MHz, -1,       0,  -1,   512*1024}, //GD25WD40C
+	{0x00514013, FLASH_LINE_2, 1,  2,   0x07,0x07|(0U<<8),0x00|(0U<<8),0x06|(0U<<8),   0x01|(0U<<8), FLASH_CLK_32MHz, -1,       0,  -1,   512*1024}, ///MD25D40D
+	{0x00856013, FLASH_LINE_2, 2,  2,   0x1F,0x00|(1U<<8),0x1F|(1U<<8),0x03|(1U<<8),   0x16|(1U<<8), FLASH_CLK_64MHz, -1,       1,  14,   512*1024}, ///P25Q40H
+	{0x00c84013, FLASH_LINE_2, 2,  2,   0x1F,0x1F|(0U<<8),0x00|(0U<<8),0x0B|(0U<<8),   0x16|(1U<<8), FLASH_CLK_32MHz,  9,       1,  14,   512*1024} ///GD25Q40C
+////{0x00000000, FLASH_LINE_2, 2,  2,   0x1F,0x00|(1U<<8),0x1F|(1U<<8),0x03|(1U<<8),   0x16|(1U<<8), FLASH_CLK_32MHz, -1,       1,  -1,   512*1024}, ///
 };
 
 static UINT32 flash_id = 0;
@@ -228,25 +232,50 @@ void set_flash_qe(void)
 	if((flash_current_config == NULL)&&(flash_id != 0x00c22314))
 		return;
 	if((flash_current_config != NULL)&&(flash_current_config->qe_bit_post == -1)){
-		////printf("no support line4\r\n");
+		///printf("no support line4\r\n");
 		return;
 	}
 	while(reg_FLASH_OPERATE_SW & 0x80000000){}
 	//WRSR QE=1
 	temp0 = reg_FLASH_CONF; //??WRSR Status data
-	reg_FLASH_CONF = ((temp0 &  SET_FLASH_CLK_CONF)
-					| (temp0 &  SET_MODE_SEL)
-					| (temp0 &  SET_FWREN_FLASH_CPU)
-					| (0x40 << BIT_WRSR_DATA) // SET QE=1  don't protect
-					| (temp0 &  SET_CRC_EN));
-
-	//Start WRSR
-	temp0 = reg_FLASH_OPERATE_SW;
-	reg_FLASH_OPERATE_SW = ((temp0              &  SET_ADDRESS_SW)
-							| (FLASH_OPCODE_WRSR2 << BIT_OP_TYPE_SW)
-							| (0x1                << BIT_OP_SW)
-							| (0x1                << BIT_WP_VALUE)); // make WP equal 1 not protect SRP
-	while(reg_FLASH_OPERATE_SW & 0x80000000);
+	if(flash_id == 0x00c22314){
+		reg_FLASH_CONF = ((temp0 &  SET_FLASH_CLK_CONF)
+						| (temp0 &  SET_MODE_SEL)
+						| (temp0 &  SET_FWREN_FLASH_CPU)
+						| (0x40 << BIT_WRSR_DATA) // SET QE=1  don't protect
+						| (temp0 &  SET_CRC_EN));
+		//Start WRSR
+		temp0 = reg_FLASH_OPERATE_SW;
+		reg_FLASH_OPERATE_SW = ((temp0              &  SET_ADDRESS_SW)
+								| (FLASH_OPCODE_WRSR2 << BIT_OP_TYPE_SW)
+								| (0x1                << BIT_OP_SW)
+								| (0x1                << BIT_WP_VALUE)); // make WP equal 1 not protect SRP
+		while(reg_FLASH_OPERATE_SW & 0x80000000);
+	}
+	else{
+		//temp0 &= ~(SET_WRSR_DATA);
+		//reg_FLASH_CONF = temp0 | ((flash_current_config->qe_bit << flash_current_config->qe_bit_post) << BIT_WRSR_DATA);
+		reg_FLASH_CONF = ((temp0 &  SET_FLASH_CLK_CONF)
+						| (temp0 &  SET_MODE_SEL)
+						| (temp0 &  SET_FWREN_FLASH_CPU)
+						| ((flash_current_config->qe_bit << flash_current_config->qe_bit_post) << BIT_WRSR_DATA) // SET QE=1  don't protect
+						| (temp0 &  SET_CRC_EN));
+		//Start WRSR
+		temp0 = reg_FLASH_OPERATE_SW;
+		if(flash_current_config->bp_wrsr == 2){
+			reg_FLASH_OPERATE_SW = ((temp0              &  SET_ADDRESS_SW)
+									| (FLASH_OPCODE_WRSR2 << BIT_OP_TYPE_SW)
+									| (0x1                << BIT_OP_SW)
+									| (0x1                << BIT_WP_VALUE)); // make WP equal 1 not protect SRP
+		}
+		else{
+			reg_FLASH_OPERATE_SW = ((temp0              &  SET_ADDRESS_SW)
+									| (FLASH_OPCODE_WRSR << BIT_OP_TYPE_SW)
+									| (0x1                << BIT_OP_SW)
+									| (0x1                << BIT_WP_VALUE)); // make WP equal 1 not protect SRP
+		}
+		while(reg_FLASH_OPERATE_SW & 0x80000000);
+	}
 }
 
 /**************************************************
@@ -344,6 +373,7 @@ void set_flash_protect(uint8 all)
 	}
 
 	value = get_flash_rdsr(flash_current_config->bp_wrsr);
+	///printf("[L%d]type:%D param:%x,cmp:%d\r\n",__LINE__,type,param,cmp);
 
 	if(((param << flash_current_config->protect_post) != 
         (value & (flash_current_config->protect_mask << flash_current_config->protect_post)))
@@ -359,6 +389,7 @@ void set_flash_protect(uint8 all)
 		////printf("--write status reg:%x,%x--\r\n", value, flash_current_config->bp_wrsr);
 		set_flash_wrsr(flash_current_config->bp_wrsr, value);
 	}
+	///printf("[L%d]flash sr:%x\r\n",__LINE__,get_flash_rdsr(2));
 }
 
 /**************************************************
@@ -633,13 +664,13 @@ void flash_init(void)
 	set_flash_qe();
 #endif
 
-#if CFG_DEFAULT_FLASH_PROTECT_MODE == FLASH_PROTECT_HALF
+#if ((CFG_DEFAULT_FLASH_PROTECT_MODE) == (FLASH_PROTECT_HALF))
 	set_flash_protect(FLASH_PROTECT_HALF);
-#elif CFG_DEFAULT_FLASH_PROTECT_MODE == FLASH_PROTECT_ALL
+#elif ((CFG_DEFAULT_FLASH_PROTECT_MODE) == (FLASH_PROTECT_ALL))
 	set_flash_protect(FLASH_PROTECT_ALL);
-#elif CFG_DEFAULT_FLASH_PROTECT_MODE == FLASH_UNPROTECT_LAST_BLOCK
+#elif ((CFG_DEFAULT_FLASH_PROTECT_MODE) == (FLASH_UNPROTECT_LAST_BLOCK))
 	set_flash_protect(FLASH_UNPROTECT_LAST_BLOCK);
-#elif CFG_DEFAULT_FLASH_PROTECT_MODE == FLASH_PROTECT_NONE
+#elif ((CFG_DEFAULT_FLASH_PROTECT_MODE) == (FLASH_PROTECT_NONE))
 	set_flash_protect(FLASH_PROTECT_NONE);
 #else
 	set_flash_protect(FLASH_PROTECT_ALL);

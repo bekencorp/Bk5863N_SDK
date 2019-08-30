@@ -340,7 +340,7 @@
             <RvctStartVector></RvctStartVector>
           </ArmAdsMisc>
           <Cads>
-            <interw>1</interw>
+            <interw>0</interw>
             <Optim>1</Optim>
             <oTime>0</oTime>
             <SplitLS>0</SplitLS>

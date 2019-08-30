@@ -57,7 +57,7 @@ void BK5863SystemInit(void)
 	REG_APB7_GPIOC_DATA         = 0x00360009;	        //gpioc[1,2,4,5] input
 	REG_APB7_GPIOD_CFG = 0x0CFFFF;                      //I2C 2 inter pull up
 	delay_us(10);
-	REG_APB3_ICU_CLOCKSOURCE    = SYSCLK_HFSRC_64M;     //switch to 32Mhz
+	REG_APB3_ICU_CLOCKSOURCE    = SYSCLK_HFSRC_32M;     //switch to 32Mhz
 
     REG_APB3_ICU_ANA4_CTRL  |=  1<<21; //32k clock calibration (toggle)
     delay_us(10);

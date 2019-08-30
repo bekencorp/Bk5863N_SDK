@@ -855,5 +855,18 @@ unsigned int get_lo_frequency_Ncal(unsigned int freq)
 	return 0;
 }
 
+void BK5824_cw_hold_toggle(unsigned int reg_value)
+{
+	unsigned int reg_value1 = reg_value;
+
+	///BK5824SpiRead(15, (unsigned char*)&reg_value);
+	reg_value1 &= ~(1<<17);
+	BK5824SpiWrite(7,(unsigned char*)&reg_value1);
+  BKDelay100uS(30);   
+	reg_value1 = reg_value;
+	reg_value1 |= (1<<17);  
+	BK5824SpiWrite(7,(unsigned char*)&reg_value1);
+}
+
 /***********************  END OF FILES  ***********************/
 
